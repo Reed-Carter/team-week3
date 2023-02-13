@@ -1,0 +1,14 @@
+[
+	{
+		"Name": "Portland, OR",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=45.5118&lon=-122.6756"
+	},
+	{
+		"Name": "San Diego, CA",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=32.7157&lon=-117.1617"
+	},
+	{
+		"Name": "Duluth, MN",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=46.788&lon=-92.0998"
+	}
+]
