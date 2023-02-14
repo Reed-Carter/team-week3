@@ -20,7 +20,6 @@ For data that's already available:
            - Add column headers from `headers.txt`
            - Add a location column based on filename 
            - Append to .csv file
-           - Add location name to `sources.yaml` under `cities`.
 3.  Upload .csv to Big Query 
 
 For future data, write a dag with tasks: 
