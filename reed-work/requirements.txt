@@ -2,3 +2,5 @@ pandas
 selenium
 html5lib
 requests-html
+google-cloud-bigquery
+pyarrow
