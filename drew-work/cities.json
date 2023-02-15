@@ -1,0 +1,46 @@
+[
+	{
+		"Name": "Portland, OR",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=45.5118&lon=-122.6756"
+	},
+	{
+		"Name": "San Diego, CA",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=32.7157&lon=-117.1617"
+	},
+	{
+		"Name": "Duluth, MN",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=46.788&lon=-92.0998"
+	},
+	{
+		"Name": "Minneapolis, MN",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=44.979&lon=-93.2649"
+	},
+	{
+		"Name": "Salt Lake City, UT",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?zoneid=UTZ105&zflg=1"
+	},
+	{
+		"Name": "Denver, CO",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=39.74&lon=-104.992"
+	},
+	{
+		"Name": "San Francisco, CA",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=37.7771&lon=-122.4197"
+	},
+	{
+		"Name": "New York City, NY",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=40.7143&lon=-74.006"
+	},
+	{
+		"Name": "Portland, ME",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=43.6592&lon=-70.2567"
+	},
+	{
+		"Name": "Seattle, WA",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=47.6036&lon=-122.3294"
+	},
+	{
+		"Name": "Baltimore, MD",
+		"NWS_URL": "https://forecast.weather.gov/MapClick.php?lat=39.2906&lon=-76.6093"
+	}
+]
