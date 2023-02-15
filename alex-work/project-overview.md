@@ -19,7 +19,9 @@ For data that's already available:
            - Retrieve .txt data as dataframe 
            - Add column headers from `headers.txt`
            - Add a location column based on filename 
-           - Append to .csv file
+           - Append to list of rows
+         - Create dataframe from list of rows
+         - Write dataframe to .csv
 3.  Upload .csv to Big Query 
 
 For future data, write a dag with tasks: 
