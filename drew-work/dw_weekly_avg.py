@@ -31,7 +31,13 @@ SCHEMA = [
 
 @task
 def calculate_weekly_averages():
+    """queries daily data stored in bigquery and calculates weekly_avg stored in own table
+
+    """
+
     client = bigquery.Client()
+
+    # query daily table using SQL
     query = f"""
     SELECT location, city, state, lat, lon,
         ROUND(AVG(temp_f), 1) AS temp_f_avg,
@@ -45,11 +51,16 @@ def calculate_weekly_averages():
     WHERE DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) <= DATE(last_update)
     GROUP BY location, city, state, lat, lon
     """
+
     job_config = bigquery.QueryJobConfig(use_query_cache=True)
     query_job = client.query(query, job_config=job_config)
     results = query_job.result()
+
     weekly_df = results.to_dataframe(bqstorage_client=None)
+
+    # put into json
     data = weekly_df.to_json(orient='records')
+
     return data
 
 @task
