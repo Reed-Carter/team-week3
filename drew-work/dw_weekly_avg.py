@@ -65,6 +65,8 @@ def calculate_weekly_averages():
 
 @task
 def write_weekly_avg_to_bq(data):
+    """ writes weekly_avg to bigquery
+    """
 
     df = pd.read_json(data, orient='records')
 
@@ -100,6 +102,9 @@ def write_weekly_avg_to_bq(data):
 )
 
 def weekly_avg_to_bq():
+    """ define tasks and task dependencies
+    """
+
     # Define tasks
     calculate_weekly_avg_task = calculate_weekly_averages()
     write_weekly_avg_task = write_weekly_avg_to_bq(calculate_weekly_avg_task)
