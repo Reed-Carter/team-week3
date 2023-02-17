@@ -6,3 +6,9 @@ fsspec
 google-cloud-storage
 google-cloud-bigquery
 beautifulsoup4
+lxml
+html5lib
+pytz
+tzwhere
+apache-airflow-providers-google
+apache-airflow[google]
