@@ -61,11 +61,17 @@ CITIES = [
 	}
 ]
 
+
 @task
 def scrape_weather_data():
+    """scrapes weather from national weather service and turns to json
+
+    Returns:
+        json of weather data
+    """
 
     data = []
-
+    # loop through cities using beautiful soup
     for city in CITIES:
         try:
             response = requests.get(city['NWS_URL'])
@@ -92,6 +98,7 @@ def scrape_weather_data():
         last_update_elem = soup.find('td', text='Last update')
         last_update = last_update_elem.find_next('td').text.strip() if last_update_elem else None
 
+        # appends scraped data in following format:
         data.append({
             'location': city['Name'],
             'lat': lat,
@@ -114,8 +121,16 @@ def scrape_weather_data():
 
 @task
 def transform_weather_data(data):
+    """read json into df and transforms data
 
-    # df = pd.DataFrame(data)
+    Args:
+        data (json from scrape func)
+
+    Returns:
+        json of transformed data
+    """
+
+    
     df = pd.read_json(data, orient='records')
 
     df[['city', 'state']] = df['location'].str.split(', ', expand=True)
@@ -138,15 +153,20 @@ def transform_weather_data(data):
     df['last_update'] = df['last_update'].apply(lambda x: dateutil.parser.parse(x, tzinfos={'CST': dateutil.tz.tzoffset(None, -21600)}).astimezone(dateutil.tz.tzutc()))
     df['last_update'] = df['last_update'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S.%f'))
     df = df.drop(['temperature', 'dewpoint', 'wind_chill'], axis=1)
-
     df = df.where(pd.notnull(df), None)
-    # Convert dataframe to list of dictionaries
+
+    # Convert dataframe to json
     data = df.to_json(orient='records')
 
     return data
 
 @task
 def write_weather_data_to_bigquery(data):
+    """reads json into df and loads df into bigquery
+
+    Args:
+        data (json from transform func)
+    """
 
     PROJECT_ID = "team-week3"
     DATASET_ID = "weather-dw"
@@ -172,7 +192,6 @@ def write_weather_data_to_bigquery(data):
         {"name": "last_update", "type": "STRING", "mode": "REQUIRED"},
     ]
 
-    # df = pd.DataFrame(data, index=[0])
     df = pd.read_json(data, orient='records')
 
     client = bigquery.Client()
@@ -205,6 +224,8 @@ def write_weather_data_to_bigquery(data):
     schedule_interval='0 0,12 * * *',
 )
 def weather_data_pipeline():
+    """define tasks and task dependencies
+    """
 
     scrape_weather_data_task = scrape_weather_data()
 
