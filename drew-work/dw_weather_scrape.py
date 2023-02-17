@@ -130,29 +130,53 @@ def transform_weather_data(data):
         json of transformed data
     """
 
-    
+    # read json
     df = pd.read_json(data, orient='records')
-
+    # separate city and state from location and set as string
     df[['city', 'state']] = df['location'].str.split(', ', expand=True)
     df["city"] = df["city"].astype(str)
     df["state"] = df["state"].astype(str)
+
+    # convert lat and lon to float
     df[['lat', 'lon']] = df[['lat', 'lon']].astype(float)
+
+    # convert elev_ft to int
     df['elev_ft'] = df.apply(lambda row: int(row['elev_ft']) if row['elev_ft'] != 'NA' else None, axis=1)
+
+    # make conversions and separate columns for temp_f and temp_c convert to int
     df['temp_f'] = df['temperature'].str.extract('(\d+)').astype(int)
     df['temp_c'] = (df['temp_f'] - 32) * 5/9
     df['temp_c'] = df['temp_c'].round().astype(int)
+
+    # convert humidity percentage to float
     df['humidity'] = df['humidity'].str.extract('(\d+)', expand=False).astype(float) / 100
+
+    # convert wind_speed to int
     df['wind_speed'] = df['wind_speed'].str.extract('(\d+)', expand=False).fillna(0).astype(int)
     df['wind_speed'] = df['wind_speed'].replace('Calm', 0)
+
+    # convert barometer to millibars and display as float
     df['barometer'] = df['barometer'].apply(lambda x: float(x.split()[0]) * 33.8639 if 'in' in x and x != 'NA' else None)
     df['barometer'] = df['barometer'].round(2)
+
+    # create two columns for dewpoint_f and dewpoint_c and convert to int
     df[['dewpoint_f', 'dewpoint_c']] = df['dewpoint'].str.extract('(\d+).*?(\d+)', expand=True).astype(int)
+
+    # strip and convert vis_miles to float
     df['vis_miles'] = df['vis_miles'].str.extract('(\d+\.\d+|\d+)', expand=False).astype(float).round(2)
+
+    # create two columns for windchill_f and windchill_c and convert to float
     df[['wind_chill_f', 'wind_chill_c']] = df['wind_chill'].str.extract('(\d+).*?(\d+)', expand=True).astype(float).fillna(0)
     df[['wind_chill_f', 'wind_chill_c']] = df['wind_chill'].str.extract('(\d+).*?(\d+)', expand=True).astype(float).fillna(0).replace(0, None)
+
+    # convert last update to timestamp
     df['last_update'] = df['last_update'].apply(lambda x: dateutil.parser.parse(x, tzinfos={'CST': dateutil.tz.tzoffset(None, -21600)}).astimezone(dateutil.tz.tzutc()))
     df['last_update'] = df['last_update'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S.%f'))
+
+    # drop unneeded columns
     df = df.drop(['temperature', 'dewpoint', 'wind_chill'], axis=1)
+
+    # put None for Null
     df = df.where(pd.notnull(df), None)
 
     # Convert dataframe to json
