@@ -1,23 +1,39 @@
-from google.cloud import bigquery
-from google.oauth2 import service_account
-from bs4 import BeautifulSoup
 import requests
 import pandas as pd 
-import yaml 
+import numpy as np
+import os 
 import re
+import yaml
 from collections import deque
 from io import StringIO
-from datetime import datetime, timedelta \
+from datetime import datetime, timedelta
+from bs4 import BeautifulSoup
 # Airflow imports: 
 from airflow import DAG
 from airflow.decorators import dag, task
-from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateEmptyTableOperator, BigQueryInsertJobOperator
-from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
+# GCP imports: 
+from google.cloud import bigquery
+from google.oauth2 import service_account
 
+## ---------- GLOBAL VARIABLES ---------- ## 
+# GCP/BigQuery information
+PROJECT_ID = 'team-week3'
+# DATASET_ID = 'alaska'
+DATASET_ID = 'alaska_test'
+TABLE_ID = 'uscrn'
+# Path information
+PATH = os.path.abspath(__file__)
+DIR_NAME = os.path.dirname(PATH)
+# URL Links (/data/sources.yaml)
+with open(f"{DIR_NAME}/data/sources.yaml", "r") as fp:
+  SOURCES = yaml.full_load(fp)
+
+## ---------- DEFINING TASKS ---------- ## 
 @task
 def lastAdded() -> datetime: 
   """Reads/returns latest 'date_added_utc' value from .csv"""
-  with open("data/uscrn.csv", 'r') as fp:
+
+  with open(f"{DIR_NAME}/data/uscrn.csv", 'r') as fp:
     q = deque(fp, 1)  
   last_added = pd.read_csv(StringIO(''.join(q)), header=None).iloc[0,-1]
   last_added = datetime.strptime(last_added, "%Y-%m-%d %H:%M:%S.%f")
@@ -30,7 +46,7 @@ def lastAdded() -> datetime:
 def getNewFileURLs(last_added:datetime, ti=None) -> list: 
   """Check/obtain updates from USCRN updates page"""
   now = datetime.utcnow()
-  updates_url = f"https://www.ncei.noaa.gov/pub/data/uscrn/products/hourly02/updates/{now.year}"
+  updates_url = SOURCES['USCRN']['updates'] + "/" + str(now.year)
 
   df = pd.read_html(updates_url, skiprows=[1,2])[0]
   df.drop(["Size", "Description"], axis=1, inplace=True)
@@ -39,7 +55,7 @@ def getNewFileURLs(last_added:datetime, ti=None) -> list:
 
   df = df[df['Last modified'] > last_added]
 
-  # Will use update_range to name .csv later
+  # XCOM Push: Will use update_range to name .csv later
   update_range = (min(df['Last modified']), max(df['Last modified'])) 
   ti.xcom_push(key="update_range", value=update_range)
 
@@ -51,7 +67,7 @@ def getNewFileURLs(last_added:datetime, ti=None) -> list:
 def getUpdates(new_file_urls:list) -> dict: 
   """Scrape data from list of new urls, store and return as list of lists"""
 
-  locations = pd.read_csv("data/locations.csv")[['station_location', 'wbanno']]
+  locations = pd.read_csv(f"{DIR_NAME}/data/locations.csv")
   locations['wbanno'] = locations['wbanno'].astype(int).astype(str)
   wbs = set(locations['wbanno'])
 
@@ -70,10 +86,11 @@ def transformDF(rows:list, ti=None):
   """Read rows from getUpdates(), cast to dataframe, transform, write to csv"""
   
   # Get column headers 
-  columns = list(pd.read_csv("data/column_descriptions.csv")['col_name'])
+  columns = list(pd.read_csv(f"{DIR_NAME}/data/column_descriptions.csv")['col_name'])
 
   # Get locations
-  locations = pd.read_csv("data/locations.csv")[['station_location', 'wbanno']]
+  locations = pd.read_csv(f"{DIR_NAME}/data/locations.csv")
+  locations = locations[['station_location', 'wbanno']]
   locations['wbanno'] = locations['wbanno'].astype(int).astype(str) 
   locations.set_index("wbanno", inplace=True)
 
@@ -110,23 +127,70 @@ def transformDF(rows:list, ti=None):
   df['date_added_utc'] = datetime.utcnow() 
 
   # Write to .csv
-  # Pull `update_range` from XCOM (created by 'getNewFileUrls())
+  # XCOM Pull: `update_range` from XCOM created by 'getNewFileUrls'
   update_range = ti.xcom_pull(key="update_range", task_id="getNewFileURLs")
-  df.to_csv(f"data/updates/{update_range[0]}-{update_range[1]}.csv")
+  df.to_csv(f"{DIR_NAME}/data/uscrn_updates/{update_range[0]}-{update_range[1]}.csv")
 
 
 @task
-def uploadBQ():
-  """Upload latest update .csv file to BigQuery"""
+def uploadBQ(ti=None):
+  """Upload latest uscrn_update .csv file to BigQuery"""
 
-  
+  key_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+  credentials = service_account.Credentials.from_service_account_file(
+   key_path, scopes=["https://www.googleapis.com/auth/cloud-platform"],
+  )
+  client = bigquery.Client(credentials=credentials, project=PROJECT_ID)
 
+  schema = [
+    bigquery.SchemaField("station_location", "STRING", mode="REQUIRED"), 
+    bigquery.SchemaField("wbanno", "STRING", mode="REQUIRED"), 
+    bigquery.SchemaField("crx_vn", "STRING", mode="NULLABLE"), 
+    bigquery.SchemaField("utc_datetime", "DATETIME", mode="REQUIRED"), 
+    bigquery.SchemaField("lst_datetime", "DATETIME", mode="REQUIRED"), 
+    bigquery.SchemaField("longitude", "FLOAT", mode="REQUIRED"), 
+    bigquery.SchemaField("latitude", "FLOAT", mode="REQUIRED"), 
+    bigquery.SchemaField("t_calc", "FLOAT", mode="NULLABLE"), 
+    bigquery.SchemaField("t_hr_avg", "FLOAT", mode="NULLABLE"), 
+    bigquery.SchemaField("t_max", "FLOAT", mode="NULLABLE"), 
+    bigquery.SchemaField("t_min", "FLOAT", mode="NULLABLE"), 
+    bigquery.SchemaField("p_calc", "FLOAT", mode="NULLABLE"), 
+    bigquery.SchemaField("solarad", "FLOAT", mode="NULLABLE"), 
+    bigquery.SchemaField("solarad_flag", "STRING", mode="NULLABLE"), 
+    bigquery.SchemaField("solarad_max", "FLOAT", mode="NULLABLE"), 
+    bigquery.SchemaField("solarad_max_flag", "STRING", mode="NULLABLE"), 
+    bigquery.SchemaField("solarad_min", "FLOAT", mode="NULLABLE"), 
+    bigquery.SchemaField("solarad_min_flag", "STRING", mode="NULLABLE"), 
+    bigquery.SchemaField("sur_temp_type", "STRING", mode="NULLABLE"), 
+    bigquery.SchemaField("sur_temp", "FLOAT", mode="NULLABLE"), 
+    bigquery.SchemaField("sur_temp_flag", "STRING", mode="NULLABLE"), 
+    bigquery.SchemaField("sur_temp_max", "FLOAT", mode="NULLABLE"), 
+    bigquery.SchemaField("sur_temp_max_flag", "STRING", mode="NULLABLE"), 
+    bigquery.SchemaField("sur_temp_min", "FLOAT", mode="NULLABLE"), 
+    bigquery.SchemaField("sur_temp_min_flag", "STRING", mode="NULLABLE"), 
+    bigquery.SchemaField("rh_hr_avg", "FLOAT", mode="NULLABLE"), 
+    bigquery.SchemaField("rh_hr_avg_flag", "STRING", mode="NULLABLE"), 
+    bigquery.SchemaField("date_added_utc", "DATETIME", mode="REQUIRED")
+  ]
 
-  
+  jc = bigquery.LoadJobConfig(
+    autodetect=False,
+    schema=schema,
+    source_format="CSV",
+    create_disposition="CREATE_NEVER",
+    write_disposition="WRITE_APPEND"   
+  )
 
+  full_table_id = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
+  update_range = ti.xcom_pull(key="update_range", task_id="getNewFileURLs")
+  with open(f"{DIR_NAME}/data/uscrn_updates/{update_range[0]}-{update_range[1]}.csv") as fp: 
+    job = client.load_table_from_file(fp, full_table_id, job_config=jc)
+  job.result()
 
+  table = client.get_table(full_table_id)
+  print(f"Loaded {table.num_rows} rows and {table.schema} columns")
 
-
+## ---------- DEFINING DAG ---------- ## 
 @dag(
    schedule_interval="@once",
    start_date=datetime.utcnow(),
