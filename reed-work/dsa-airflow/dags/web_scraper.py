@@ -275,7 +275,7 @@ def load_data_to_BigQuery(
 
 @dag(
     schedule=timedelta(days=1),
-    start_date=pendulum.datetime(2023, 2, 19, 7, tz="UTC"),
+    start_date=pendulum.datetime(2023, 2, 19, 7, 55, tz="UTC"),
     catchup=False,
     default_view='graph',
     is_paused_upon_creation=True,
