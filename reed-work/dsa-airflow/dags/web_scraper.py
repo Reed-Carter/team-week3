@@ -12,15 +12,18 @@ from google.cloud import bigquery
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from datetime import datetime
+from datetime import timedelta
+import pendulum
 
 @task
 def scrape_nws_forcast_data():
     '''
     This function uses beautiful soup to scrape weather forcast data from the websites below and returns a dataframe
     '''
-    urls = ["https://forecast.weather.gov/MapClick.php?lat=57.0826&lon=-135.2692#.Y-vs_9LMJkg",
-        'https://forecast.weather.gov/MapClick.php?lat=45.5118&lon=-122.6756#.Y-vtHNLMJkg',
-        ]
+    urls = [
+            "https://forecast.weather.gov/MapClick.php?lat=57.0826&lon=-135.2692#.Y-vs_9LMJkg",
+            'https://forecast.weather.gov/MapClick.php?lat=45.5118&lon=-122.6756#.Y-vtHNLMJkg',
+            ]
         
     combined_df = pd.DataFrame()
 
@@ -73,9 +76,10 @@ def scrape_precip_data():
     '''
     Scrapes precip data from the websites in the 'URLS' variable and returns a small 1 column dataframe of precip data for the cities of portland and Sitka.
     '''
-    urls = ['https://www.localconditions.com/weather-portland-oregon/97201/past.php',
-        "https://www.localconditions.com/weather-sitka-alaska/99835/past.php",
-        ]
+    urls = [
+            'https://www.localconditions.com/weather-portland-oregon/97201/past.php',
+            "https://www.localconditions.com/weather-sitka-alaska/99835/past.php",
+            ]
 
     precip_df = pd.DataFrame()
 
@@ -182,7 +186,7 @@ def data_transformation(dict1):
 @task
 def write_weather_data_to_bigquery(data):
 
-    PROJECT_ID = "deb-01-372116"
+    PROJECT_ID = "team-week3"
     DATASET_ID = "reed_weather_data"
     DAILY_TABLE_ID = "weather_data"
 
@@ -270,8 +274,8 @@ def load_data_to_BigQuery(
     logger.info(f"loaded weather_data")
 
 @dag(
-    schedule_interval="@once",
-    start_date=datetime.utcnow(),
+    schedule=timedelta(days=1),
+    start_date=pendulum.datetime(2023, 2, 19, 7, 55, tz="UTC"),
     catchup=False,
     default_view='graph',
     is_paused_upon_creation=True,
