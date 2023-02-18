@@ -7,9 +7,6 @@ import logging
 from airflow import DAG
 from airflow.decorators import dag, task
 from bs4 import BeautifulSoup
-# from selenium import webdriver
-# from selenium.webdriver.common.by import By
-# from time import sleep
 from typing import List
 from google.cloud import bigquery
 from google.cloud import bigquery
@@ -229,56 +226,6 @@ def write_weather_data_to_bigquery(data):
     job = client.load_table_from_dataframe(df, table_ref, job_config=job_config)
     job.result()
 
-# @task(multiple_outputs=True)
-# def define_load_parameters():
-#     #authorization
-#     key_path = "/home/reed/.creds/dsa-deb-sa.json"
-#     credentials = service_account.Credentials.from_service_account_file(
-#         key_path, scopes=["https://www.googleapis.com/auth/cloud-platform"])
-
-#     client = bigquery.Client(credentials=credentials, project=credentials.project_id,)
-
-#     # change to match your filesystem
-#     PROJECT_NAME = credentials.project_id
-#     DATASET_NAME = "reed_weather_data"
-
-#     # **** BIGQUERY DATASET CREATION ****
-
-#     dataset_id = f"{PROJECT_NAME}.{DATASET_NAME}"
-#     dataset = bigquery.Dataset(dataset_id)
-#     dataset.location = "US"
-#     dataset = client.create_dataset(dataset, exists_ok=True)
-    
-#     logger = logging.getLogger(__name__) 
-#     logger.info(f"Created weather dataset: {dataset.full_dataset_id}")
-
-#     FACTS_TABLE_METADATA = {
-#         'weather_data': {
-#             'table_name': 'weather_data',
-#             'schema': [
-#                 # indexes are written if only named in the schema
-#                 bigquery.SchemaField('name', 'STRING', mode='REQUIRED'),
-#                 bigquery.SchemaField('datetime', 'DATETIME', mode='NULLABLE'),
-#                 bigquery.SchemaField('tempmax', 'FLOAT64', mode='NULLABLE'),
-#                 bigquery.SchemaField('tempmin', 'FLOAT64', mode='NULLABLE'),
-#                 bigquery.SchemaField('temp', 'FLOAT64', mode='NULLABLE'),
-#                 bigquery.SchemaField('windchill', 'FLOAT64', mode='NULLABLE'),
-#                 bigquery.SchemaField('dewpoint', 'FLOAT64', mode='NULLABLE'),
-#                 bigquery.SchemaField('humidity', 'FLOAT64', mode='NULLABLE'),
-#                 bigquery.SchemaField('precip', 'FLOAT64', mode='NULLABLE'),
-#                 bigquery.SchemaField('windspeed', 'FLOAT64', mode='NULLABLE'),
-#                 bigquery.SchemaField('visibility', 'FLOAT64', mode='NULLABLE'),
-#             ]
-#         }      
-#     }
-
-#     # Load scraped Sitka and Portland daily weather to the historical data table
-
-#     # get table name and schema from FACTS_TABLE_METADATA config param
-#     table_name = f"{PROJECT_NAME}.{DATASET_NAME}.{FACTS_TABLE_METADATA['weather_data']['table_name']}"
-#     schema = FACTS_TABLE_METADATA['weather_data']['schema']
-    
-#     return {'client':client, 'table':table_name, 'schema':schema}
 
 @task
 def load_data_to_BigQuery(
@@ -340,13 +287,10 @@ def ETL_pipeline():
     scrape_precip_data_task = scrape_precip_data()
 
     #combine df's to make a source df
-    combine_df_task = combine_dataframes(scrape_detailed_data_task,scrape_precip_data_task)
+    combine_df_task = combine_dataframes(scrape_detailed_data_task, scrape_precip_data_task)
 
     #data transformation task
     data_transformation_task = data_transformation(combine_df_task)
-
-    # #returns the bigquery client, table name, and schema
-    # define_client_table_schema_task = define_load_parameters()
 
     #load to BigQuery
     load_to_BigQuery_task = write_weather_data_to_bigquery(data_transformation_task)
@@ -355,3 +299,59 @@ def ETL_pipeline():
     [scrape_detailed_data_task, scrape_precip_data_task] >> combine_df_task >> data_transformation_task >> load_to_BigQuery_task
 
 dag = ETL_pipeline()
+
+
+
+
+#----------------unused task-----------------------------------------
+
+# @task(multiple_outputs=True)
+# def define_load_parameters():
+#     #authorization
+#     key_path = "/home/reed/.creds/dsa-deb-sa.json"
+#     credentials = service_account.Credentials.from_service_account_file(
+#         key_path, scopes=["https://www.googleapis.com/auth/cloud-platform"])
+
+#     client = bigquery.Client(credentials=credentials, project=credentials.project_id,)
+
+#     # change to match your filesystem
+#     PROJECT_NAME = credentials.project_id
+#     DATASET_NAME = "reed_weather_data"
+
+#     # **** BIGQUERY DATASET CREATION ****
+
+#     dataset_id = f"{PROJECT_NAME}.{DATASET_NAME}"
+#     dataset = bigquery.Dataset(dataset_id)
+#     dataset.location = "US"
+#     dataset = client.create_dataset(dataset, exists_ok=True)
+    
+#     logger = logging.getLogger(__name__) 
+#     logger.info(f"Created weather dataset: {dataset.full_dataset_id}")
+
+#     FACTS_TABLE_METADATA = {
+#         'weather_data': {
+#             'table_name': 'weather_data',
+#             'schema': [
+#                 # indexes are written if only named in the schema
+#                 bigquery.SchemaField('name', 'STRING', mode='REQUIRED'),
+#                 bigquery.SchemaField('datetime', 'DATETIME', mode='NULLABLE'),
+#                 bigquery.SchemaField('tempmax', 'FLOAT64', mode='NULLABLE'),
+#                 bigquery.SchemaField('tempmin', 'FLOAT64', mode='NULLABLE'),
+#                 bigquery.SchemaField('temp', 'FLOAT64', mode='NULLABLE'),
+#                 bigquery.SchemaField('windchill', 'FLOAT64', mode='NULLABLE'),
+#                 bigquery.SchemaField('dewpoint', 'FLOAT64', mode='NULLABLE'),
+#                 bigquery.SchemaField('humidity', 'FLOAT64', mode='NULLABLE'),
+#                 bigquery.SchemaField('precip', 'FLOAT64', mode='NULLABLE'),
+#                 bigquery.SchemaField('windspeed', 'FLOAT64', mode='NULLABLE'),
+#                 bigquery.SchemaField('visibility', 'FLOAT64', mode='NULLABLE'),
+#             ]
+#         }      
+#     }
+
+#     # Load scraped Sitka and Portland daily weather to the historical data table
+
+#     # get table name and schema from FACTS_TABLE_METADATA config param
+#     table_name = f"{PROJECT_NAME}.{DATASET_NAME}.{FACTS_TABLE_METADATA['weather_data']['table_name']}"
+#     schema = FACTS_TABLE_METADATA['weather_data']['schema']
+    
+#     return {'client':client, 'table':table_name, 'schema':schema}
