@@ -9,7 +9,6 @@ from io import StringIO
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 # Airflow imports: 
-from airflow import DAG
 from airflow.decorators import dag, task
 # GCP imports: 
 from google.cloud import bigquery
@@ -207,5 +206,6 @@ def uscrn_dag():
 
     t1 >> t2 >> t3 >> t4
 
+dag = uscrn_dag()
 
 
