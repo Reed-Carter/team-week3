@@ -5,9 +5,8 @@ import numpy as np
 import requests
 import os
 from bs4 import BeautifulSoup
-from nws_utils.utils import getColsFromTable, getDict
+from utils.nws_utils import getColsFromTable, getDict
 # Airflow imports: 
-from airflow import DAG
 from airflow.decorators import dag, task
 from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateEmptyTableOperator, BigQueryInsertJobOperator
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
@@ -60,7 +59,7 @@ def transformDF(myDict):
   df.to_csv('data/forecasts.csv', mode='a', index=False, header=hdr)
 
 @task
-def load_data_to_bq(df: pd.DataFrame) -> None:
+def load_data_to_bq() -> None:
     """Load the transformed data to BigQuery"""
     table_id = 'team-week3.alaska.forecasts'
     bq_conn_id = 'google_cloud_default'
@@ -113,11 +112,11 @@ def load_data_to_bq(df: pd.DataFrame) -> None:
    default_view='graph',
    is_paused_upon_creation=True,
 )
-def dag_name():
+def nws_dag():
     t1 = getForecast()
     t2 = transformDF(t1)
     t3 = load_data_to_bq()
 
     t1 >> t2 >> t3
 
-
+dag = nws_dag()
