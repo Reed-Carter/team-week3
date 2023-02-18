@@ -3,4 +3,9 @@ selenium
 html5lib
 requests-html
 google-cloud-bigquery
+google-cloud-storage
 pyarrow
+jupyterlab
+pyyaml
+fsspec
+gcsfs
