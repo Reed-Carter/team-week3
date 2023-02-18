@@ -1,0 +1,88 @@
+cities: 
+
+USCRN:
+  description: Hourly historical weather data from USCRN 
+  readme: https://www.ncei.noaa.gov/pub/data/uscrn/products/hourly02/readme.txt
+  headers: https://www.ncei.noaa.gov/pub/data/uscrn/products/hourly02/headers.txt
+  index: https://www.ncei.noaa.gov/pub/data/uscrn/products/hourly02/ 
+
+NWS: 
+  description: Hourly forecasted weather data (four days) from NWS for cities in Alaska
+  cities: 
+    utqiagvik: 
+      four-day: https://forecast.weather.gov/MapClick.php?lat=71.2888&lon=-156.7923&unit=0&lg=english&FcstType=digital
+      daily: https://forecast.weather.gov/MapClick.php?lat=71.2888&lon=-156.7923
+    aleknagik: 
+      four-day: https://forecast.weather.gov/MapClick.php?lat=59.2473&lon=-158.623&unit=0&lg=english&FcstType=digital
+      daily: https://forecast.weather.gov/MapClick.php?lat=59.2792&lon=-158.6197
+    bethel: 
+      four-day: https://forecast.weather.gov/MapClick.php?lat=60.7506&lon=-160.5006&unit=0&lg=english&FcstType=digital
+      daily: https://forecast.weather.gov/MapClick.php?lat=60.7506&lon=-160.5006
+    cordova:
+      four-day:
+      daily:
+    deadhorse:
+      four-day:
+      daily:
+    denali: 
+      four-day:
+      daily:
+    fairbanks:
+      four-day:
+      daily:
+    glennallen:
+      four-day:
+      daily:
+    gustavus:
+      four-day:
+      daily:
+    ivotuk: 
+      four-day:
+      daily:
+    kenai:
+      four-day:
+      daily:
+    king_salmon: 
+      four-day:
+      daily:
+    metlakatla:
+      four-day:
+      daily:
+    port_alsworth:
+      four-day:
+      daily:
+    red_dog_mine: 
+      four-day:
+      daily:
+    ruby:
+      four-day:
+      daily:
+    sand_point:
+      four-day:
+      daily:
+    selawik: 
+      four-day:
+      daily:
+    sitka:
+      four-day:
+      daily:
+    st_paul:
+      four-day:
+      daily:
+    tok:
+      four-day:
+      daily:
+    toolik_lake:
+      four-day:
+      daily:
+    yakutat:
+  four-day:
+  daily:
+
+
+
+
+NWS: 
+  description: 'Hourly forecast from NWS, four days into the future' 
+  
+  utqiagvik: https://forecast.weather.gov/MapClick.php?w0=t&w1=td&w2=wc&w3=sfcwind&w3u=1&w4=sky&w5=pop&w6=rh&w7=rain&w8=thunder&w9=snow&w10=fzg&w11=sleet&AheadHour=0&FcstType=digital&textField1=71.2888&textField2=-156.7923&site=all&unit=0&dd=&bw=&AheadDay.x=46&AheadDay.y=9
