@@ -5,7 +5,7 @@ import numpy as np
 import requests
 import os
 from bs4 import BeautifulSoup
-from nws_utils.utils import getColsFromTable, getDict
+from utils.nws_utils import getColsFromTable, getDict
 # Airflow imports: 
 from airflow import DAG
 from airflow.decorators import dag, task
