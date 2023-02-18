@@ -1,4 +1,7 @@
-from bs4 import BeautifulSoup
+def nwsURL(row):
+  """Construct NWS forecast url from latitude and longitude columns"""
+  url = f"https://forecast.weather.gov/MapClick.php?lat={row['latitude']}&lon={row['longitude']}&unit=0&lg=english&FcstType=digital&menu=1"
+  return url
 
 def ffList(ls:list) -> list:
   """Like ffill() from pandas, except for lists"""
