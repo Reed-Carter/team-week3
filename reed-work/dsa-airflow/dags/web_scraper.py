@@ -12,6 +12,8 @@ from google.cloud import bigquery
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from datetime import datetime
+from datetime import timedelta
+import pendulum
 
 @task
 def scrape_nws_forcast_data():
@@ -270,8 +272,8 @@ def load_data_to_BigQuery(
     logger.info(f"loaded weather_data")
 
 @dag(
-    schedule_interval="@once",
-    start_date=datetime.utcnow(),
+    schedule=timedelta(days=1),
+    start_date=pendulum.datetime(2023, 2, 19, 7, tz="UTC"),
     catchup=False,
     default_view='graph',
     is_paused_upon_creation=True,
