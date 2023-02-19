@@ -151,7 +151,7 @@ def data_transformation(dict1):
     df['Last update'] = df['Last update'].apply(lambda x: dateutil.parser.parse(x, tzinfos={"EST": -5 * 3600, "CST": -6 * 3600, "MST": -7 * 3600,"PST": -8 * 3600,"AKST": -9 * 3600,"HST": -10 * 3600}))
     df['Last update'] = df['Last update'].apply(lambda x: x.astimezone(dateutil.tz.tzutc()))
     df['datetime'] = df['Last update'].dt.strftime('%Y-%m-%d')
-    # df['datetime'] = pd.to_datetime(df['datetime'])
+    #df['datetime'] = pd.to_datetime(df['datetime'])
 
     # make wind chill a float if exists and only display degree F
     try:
@@ -193,7 +193,7 @@ def write_weather_data_to_bigquery(data):
     SCHEMA = [
                 # indexes are written if only named in the schema
                 bigquery.SchemaField('name', 'STRING', mode='REQUIRED'),
-                bigquery.SchemaField('datetime', 'STRING', mode='NULLABLE'),
+                bigquery.SchemaField('datetime', 'DATETIME', mode='NULLABLE'),
                 bigquery.SchemaField('tempmax', 'FLOAT64', mode='NULLABLE'),
                 bigquery.SchemaField('tempmin', 'FLOAT64', mode='NULLABLE'),
                 bigquery.SchemaField('temp', 'FLOAT64', mode='NULLABLE'),
@@ -206,6 +206,7 @@ def write_weather_data_to_bigquery(data):
             ]
 
     df = pd.DataFrame(data)
+    df['datetime'] = pd.to_datetime(df['datetime'])
 
     client = bigquery.Client()
 
@@ -274,15 +275,17 @@ def load_data_to_BigQuery(
     logger.info(f"loaded weather_data")
 
 @dag(
-    schedule=timedelta(days=1),
-    start_date=pendulum.datetime(2023, 2, 19, 7, 55, tz="UTC"),
-    catchup=False,
+    schedule_interval="55 7 * * *",
+    # schedule=timedelta(days=1),
+    start_date=datetime.utcnow(),
+    #start_date=pendulum.datetime(2023, 2, 19, 7, 55, tz="UTC"),
+    catchup=True,
     default_view='graph',
     is_paused_upon_creation=True,
     tags=['dsa', 'dsa-example'],
 )
 
-def ETL_pipeline():
+def weather_pipeline():
 
     #create df1
     scrape_detailed_data_task = scrape_nws_forcast_data()
@@ -302,7 +305,7 @@ def ETL_pipeline():
     #orchestrate tasks
     [scrape_detailed_data_task, scrape_precip_data_task] >> combine_df_task >> data_transformation_task >> load_to_BigQuery_task
 
-dag = ETL_pipeline()
+dag = weather_pipeline()
 
 
 
