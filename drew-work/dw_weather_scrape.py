@@ -82,6 +82,7 @@ def scrape_weather_data():
         # scrape location
         location = soup.find("h2", {"class": "panel-title"})
 
+        # scrape lat, lon and elv
         lat_lon_elev = soup.find("span", {"class": "smallTxt"}).text.strip()
         lat, lon, elev = re.findall(r"[-+]?\d*\.\d+|\d+", lat_lon_elev)
 
