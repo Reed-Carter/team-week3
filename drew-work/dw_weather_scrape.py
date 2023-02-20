@@ -89,6 +89,7 @@ def scrape_weather_data():
         # scrape temperature
         temperature = soup.find("p", {"class": "myforecast-current-lrg"})
 
+        # scrape humidity
         humidity_elem = soup.find("td", text="Humidity")
         humidity = humidity_elem.find_next("td").text.strip() if humidity_elem else None
 
