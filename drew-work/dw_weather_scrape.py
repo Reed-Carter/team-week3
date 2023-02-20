@@ -121,6 +121,7 @@ def scrape_weather_data():
             wind_chill_elem.find_next("td").text.strip() if wind_chill_elem else None
         )
 
+        # scrape last update date
         last_update_elem = soup.find("td", text="Last update")
         last_update = (
             last_update_elem.find_next("td").text.strip() if last_update_elem else None
