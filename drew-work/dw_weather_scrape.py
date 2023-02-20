@@ -86,6 +86,7 @@ def scrape_weather_data():
         lat_lon_elev = soup.find("span", {"class": "smallTxt"}).text.strip()
         lat, lon, elev = re.findall(r"[-+]?\d*\.\d+|\d+", lat_lon_elev)
 
+        # scrape temperature
         temperature = soup.find("p", {"class": "myforecast-current-lrg"})
 
         humidity_elem = soup.find("td", text="Humidity")
