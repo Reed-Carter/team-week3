@@ -99,6 +99,7 @@ def scrape_weather_data():
             wind_speed_elem.find_next("td").text.strip() if wind_speed_elem else None
         )
 
+        # scrape barometer
         barometer_elem = soup.find("td", text="Barometer")
         barometer = (
             barometer_elem.find_next("td").text.strip() if barometer_elem else None
