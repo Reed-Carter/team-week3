@@ -21,7 +21,7 @@ _A dictionary of the sources of the city weather data:_
 
 ## Description:
 ## dw_weather_scrape.py
-<img src="../images/dw_webscrape_dag.png" height=60% width=60%>
+<img src="../images/dw_webscrape_daily_gif.gif">
 
 * `scrape_weather_data`
     - Uses BeautifulSoup to scrape National Weather Service and put into Pandas data frame.
@@ -36,7 +36,7 @@ _A dictionary of the sources of the city weather data:_
 <img src="../images/dw_daily_schema.png">
 
 ## dw_weekly_avg.py
-<img src="../images/dw_weekly_avg_dag.png" height=60% width=60%>
+<img src="../images/dw_weekly_avg_gif.gif" height=60% width=60%>
 
 * `calculate_weekly_averages`
     - Pulls `daily` data from BigQuery and gets averages of select columns.
