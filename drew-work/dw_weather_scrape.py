@@ -105,6 +105,7 @@ def scrape_weather_data():
             barometer_elem.find_next("td").text.strip() if barometer_elem else None
         )
 
+        # scrape dew point
         dewpoint_elem = soup.find("td", text="Dewpoint")
         dewpoint = dewpoint_elem.find_next("td").text.strip() if dewpoint_elem else None
 
