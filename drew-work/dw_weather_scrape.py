@@ -93,6 +93,7 @@ def scrape_weather_data():
         humidity_elem = soup.find("td", text="Humidity")
         humidity = humidity_elem.find_next("td").text.strip() if humidity_elem else None
 
+        # scrape wind speed
         wind_speed_elem = soup.find("td", text="Wind Speed")
         wind_speed = (
             wind_speed_elem.find_next("td").text.strip() if wind_speed_elem else None
