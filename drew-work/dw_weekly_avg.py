@@ -26,14 +26,13 @@ SCHEMA = [
     bigquery.SchemaField("barometer_avg", "FLOAT", "NULLABLE"),
     bigquery.SchemaField("dewpoint_f_avg", "FLOAT", "NULLABLE"),
     bigquery.SchemaField("dewpoint_c_avg", "FLOAT", "NULLABLE"),
-    bigquery.SchemaField("modified_at", "TIMESTAMP", "NULLABLE")]
+    bigquery.SchemaField("modified_at", "TIMESTAMP", "NULLABLE"),
+]
 
 
 @task
 def calculate_weekly_averages():
-    """queries daily data stored in bigquery and calculates weekly_avg stored in own table
-
-    """
+    """queries daily data stored in bigquery and calculates weekly_avg stored in own table"""
 
     client = bigquery.Client()
 
@@ -59,16 +58,16 @@ def calculate_weekly_averages():
     weekly_df = results.to_dataframe(bqstorage_client=None)
 
     # put into json
-    data = weekly_df.to_json(orient='records')
+    data = weekly_df.to_json(orient="records")
 
     return data
 
+
 @task
 def write_weekly_avg_to_bq(data):
-    """ writes weekly_avg to bigquery
-    """
+    """writes weekly_avg to bigquery"""
 
-    df = pd.read_json(data, orient='records')
+    df = pd.read_json(data, orient="records")
 
     client = bigquery.Client()
 
@@ -89,30 +88,29 @@ def write_weekly_avg_to_bq(data):
         table = bigquery.Table(table_ref, schema=SCHEMA)
         table = client.create_table(table)
 
-    job_config = bigquery.LoadJobConfig(write_disposition=bigquery.WriteDisposition.WRITE_APPEND)
+    job_config = bigquery.LoadJobConfig(
+        write_disposition=bigquery.WriteDisposition.WRITE_APPEND
+    )
     job = client.load_table_from_dataframe(df, table_ref, job_config=job_config)
     job.result()
 
 
 @dag(
-    'weekly_avg',
-    description='Calculates weekly averages of weather data in bigquery',
+    "weekly_avg",
+    description="Calculates weekly averages of weather data in bigquery",
     start_date=datetime.utcnow(),
-    schedule_interval='0 0 * * 0',
+    schedule_interval="0 0 * * 0",
 )
-
 def weekly_avg_to_bq():
-    """ define tasks and task dependencies
-    """
+    """define tasks and task dependencies"""
 
     # Define tasks
     calculate_weekly_avg_task = calculate_weekly_averages()
     write_weekly_avg_task = write_weekly_avg_to_bq(calculate_weekly_avg_task)
-    done = DummyOperator(task_id='done')
+    done = DummyOperator(task_id="done")
 
     # Define task dependencies
     calculate_weekly_avg_task >> write_weekly_avg_task >> done
 
+
 dag = weekly_avg_to_bq()
-
-
