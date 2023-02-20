@@ -115,6 +115,7 @@ def scrape_weather_data():
             visibility_elem.find_next("td").text.strip() if visibility_elem else None
         )
 
+        # scrape windchill
         wind_chill_elem = soup.find("td", text="Wind Chill")
         wind_chill = (
             wind_chill_elem.find_next("td").text.strip() if wind_chill_elem else None
