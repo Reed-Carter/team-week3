@@ -109,6 +109,7 @@ def scrape_weather_data():
         dewpoint_elem = soup.find("td", text="Dewpoint")
         dewpoint = dewpoint_elem.find_next("td").text.strip() if dewpoint_elem else None
 
+        # scrape visibility
         visibility_elem = soup.find("td", text="Visibility")
         visibility = (
             visibility_elem.find_next("td").text.strip() if visibility_elem else None
