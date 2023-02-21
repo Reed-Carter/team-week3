@@ -87,10 +87,16 @@ def scrape_precip_data():
             r = requests.get(url)
             soup = BeautifulSoup(r.content,"html.parser")
             details = soup.select_one(".past_weather_express")
-            data = details.find_all(text=True, recursive=False)
+            # Find all div elements with class="panel"
+            panel_divs = soup.find_all('div', {'class': 'panel'})
+            # Extract the text content of each div element and store it in a list
+            panel_texts = [panel_div.text.strip() for panel_div in panel_divs]
+            # Print the list of extracted text content
+            data = panel_texts[1]
             data = [item.strip() for item in data]
             data = [item for item in data if item]
-            data = data[2]
+            data = data[79:90]
+            data="".join(data)
             df = pd.DataFrame([data], columns=['precip'])
             precip_df = pd.concat([precip_df, df], ignore_index=True, sort=False)
             
