@@ -1,7 +1,14 @@
 ## National Weather Service Web Scrape and ETL
 #### By [Drew White](https://www.linkedin.com/in/drew-riley-white/)
 
-#### Scraping and transforming daily weather data from the National Weather Service and taking that data to perform weekly aggregations.
+#### Summary:
+This is a data engineering project that utilizes various technologies to scrape weather data, transform it, and store it in Google BigQuery. The project uses Python as its primary language and Apache Airflow as its workflow management system. BeautifulSoup is used to scrape the data from the National Weather Service and Pandas is used to manipulate the data. Google BigQuery is used as the primary data store.
+
+The `dw_weather_scrape.py` script contains three functions that work together to scrape weather data from the National Weather Service, transform the data, and write it to Google BigQuery on a daily basis.
+
+The `dw_weekly_avg.py` script pulls data from the daily table in Google BigQuery and calculates weekly averages for select columns. The script then writes the averages to the weekly_avg table on a weekly basis.
+
+_Note: For demonstration purposes in this project that the shcedule intervals are not daily and weekly but hourly and daily. This was to gather more data for the presentation of this project. In a full production environment, the Airflow DAGs will trigger at the daily and and weekly intervals._
 
 ## Technologies Used
 
