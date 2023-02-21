@@ -172,6 +172,9 @@ def transform_weather_data(data):
     # convert lat and lon to float
     df[["lat", "lon"]] = df[["lat", "lon"]].astype(float)
 
+    # multiply lon by -1 to reflect the western hemisphere
+    df["lon"] *= -1
+
     # convert elev_ft to int
     df["elev_ft"] = df.apply(
         lambda row: int(row["elev_ft"]) if row["elev_ft"] != "NA" else None, axis=1
