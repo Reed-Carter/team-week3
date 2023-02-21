@@ -8,7 +8,7 @@ The `dw_weather_scrape.py` script contains three functions that work together to
 
 The `dw_weekly_avg.py` script pulls data from the daily table in Google BigQuery and calculates weekly averages for select columns. The script then writes the averages to the weekly_avg table on a weekly basis.
 
-_Note: For demonstration purposes in this project that the shcedule intervals are not daily and weekly but hourly and daily. This was to gather more data for the presentation of this project. In a full production environment, the Airflow DAGs will trigger at the daily and and weekly intervals._
+_Note: For demonstration purposes in this project, the shcedule intervals are not daily and weekly but instead hourly and daily. This was to gather more data for the presentation of this project. In a full production environment, the Airflow DAGs will trigger at the daily and and weekly intervals._
 
 ## Technologies Used
 
