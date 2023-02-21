@@ -8,20 +8,19 @@ import datetime as dt
 from collections import deque
 from io import StringIO
 from bs4 import BeautifulSoup
+# Utilities imports: 
+# from utils.utils import nanCheck (TO-DO)
 # Airflow imports: 
 from airflow.decorators import dag, task
 # GCP imports: 
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
-
-
 ## ---------- GLOBAL VARIABLES ---------- ## 
 # GCP/BigQuery information
 PROJECT_ID = 'team-week3'
-# DATASET_ID = 'alaska'
-DATASET_ID = 'alaska_test'
-TABLE_ID = 'uscrn'
+DATASET_ID = 'alaska'
+TABLE_ID = 'uscrn_copy'
 # Path information
 PATH = os.path.abspath(__file__)
 DIR_NAME = os.path.dirname(PATH)
@@ -35,7 +34,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-handler = logging.FileHandler(f'/opt/airflow/logs/logfile.txt')
+handler = logging.FileHandler(f'/opt/airflow/logs/uscrn_dag_logs.txt')
 handler.setLevel(logging.INFO)
 
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -43,7 +42,6 @@ handler.setFormatter(formatter)
 
 # Add the handler to the logger
 logger.addHandler(handler)
-
 
 
 ## ---------- DEFINING TASKS ---------- ## 
@@ -99,7 +97,7 @@ def getUpdates(new_file_urls:list) -> list:
     response = requests.get(url)
     soup = BeautifulSoup(response.content,'html.parser')
     soup_lines = str(soup).strip().split("\n")[3:]
-    ak_rows = [re.split('\s+', line) for line in soup_lines if line[0:5] in wbs]
+    ak_rows = [re.split('\s+', line) for line in soup_lines if line[0:5] in wbs] # line[0:5] contains WBANNO code
     rows.extend(ak_rows)
 
   # Log the number of rows extracted
@@ -123,8 +121,13 @@ def transformDF(rows:list, ti=None):
   # Create dataframe
   df = pd.DataFrame(rows, columns=columns[1:])
 
+  ## (TO-DO) Check for NaN values from source
+
+  
   # Merge locations
   df = df.merge(locations, how="left", left_on="wbanno", right_index=True)
+
+  ## (TO-DO) Check for NaN values from merge 
 
   # Reorder columns 
   columns = ['station_location'] + list(df.columns)[:-1]
@@ -132,6 +135,11 @@ def transformDF(rows:list, ti=None):
 
   # Change datatypes
   df = df.apply(pd.to_numeric, errors='ignore')
+
+  ## (TO-DO) Check for NaN values from type transform 
+
+
+  ## ------ If no NaNs will be masked from source, safe to replace missing value designators ------ ## 
 
   # Replace missing value designators with NaN
   df.replace([-99999,-9999], np.nan, inplace=True) 
@@ -213,7 +221,7 @@ def uploadBQ(ti=None):
     write_disposition="WRITE_APPEND"   
   )
  
-  # Set targe table in BigQuery
+  # Set target table in BigQuery
   full_table_id = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
     
   # Read file to dataframe first -- direct loading creating schema issues
@@ -227,8 +235,17 @@ def uploadBQ(ti=None):
   job.result()
   
   # Log result 
-  table = client.get_table(full_table_id)
-  print(f"Loaded {table.num_rows} rows and {table.schema} columns")
+  print(f"Loaded {df.size} rows and {len(df.columns)} columns")
+
+@task
+def appendLocal(ti=None):
+  """Append latest uscrn_update .csv file to local copy of uscrn.csv"""
+
+  update_range = ti.xcom_pull(key="update_range", dag_id="uscrn_dag", task_ids="getNewFileURLs")
+  file_path = f"{DIR_NAME}/data/uscrn_updates/{update_range[0]}-{update_range[1]}.csv"
+
+  updates_df=pd.read_csv(file_path)
+  updates_df.to_csv(f"{DIR_NAME}/data/uscrn.csv", mode="a", header=False, index=False)
 
 ## ---------- DEFINING DAG ---------- ## 
 @dag(
@@ -245,8 +262,9 @@ def uscrn_dag():
     t3 = getUpdates(t2)
     t4 = transformDF(t3)
     t5 = uploadBQ()
+    t6 = appendLocal()
 
-    t1 >> t2 >> t3 >> t4 >> t5
+    t1 >> t2 >> t3 >> t4 >> [t5, t6]
 
 dag = uscrn_dag()
 
