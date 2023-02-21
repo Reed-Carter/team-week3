@@ -4,10 +4,12 @@ import numpy as np
 import os 
 import re
 import yaml
+import datetime as dt
 from collections import deque
 from io import StringIO
-from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
+# Utilities imports: 
+# from utils.utils import nanCheck (TO-DO)
 # Airflow imports: 
 from airflow.decorators import dag, task
 # GCP imports: 
@@ -17,9 +19,8 @@ from google.oauth2 import service_account
 ## ---------- GLOBAL VARIABLES ---------- ## 
 # GCP/BigQuery information
 PROJECT_ID = 'team-week3'
-# DATASET_ID = 'alaska'
-DATASET_ID = 'alaska_test'
-TABLE_ID = 'uscrn'
+DATASET_ID = 'alaska'
+TABLE_ID = 'uscrn_copy'
 # Path information
 PATH = os.path.abspath(__file__)
 DIR_NAME = os.path.dirname(PATH)
@@ -27,25 +28,43 @@ DIR_NAME = os.path.dirname(PATH)
 with open(f"{DIR_NAME}/data/sources.yaml", "r") as fp:
   SOURCES = yaml.full_load(fp)
 
+## ---------- SET LOGGING ---------- ## 
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+handler = logging.FileHandler(f'/opt/airflow/logs/uscrn_dag_logs.txt')
+handler.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+# Add the handler to the logger
+logger.addHandler(handler)
+
+
 ## ---------- DEFINING TASKS ---------- ## 
 @task
-def lastAdded() -> datetime: 
+def lastAdded() -> str: # String representation of datetime
   """Reads/returns latest 'date_added_utc' value from .csv"""
 
   with open(f"{DIR_NAME}/data/uscrn.csv", 'r') as fp:
     q = deque(fp, 1)  
   last_added = pd.read_csv(StringIO(''.join(q)), header=None).iloc[0,-1]
-  last_added = datetime.strptime(last_added, "%Y-%m-%d %H:%M:%S.%f")
+  last_added = dt.datetime.strptime(last_added, "%Y-%m-%d %H:%M:%S.%f")
   # Convert to EST from UTC -- 'Last modified' field in getNewFile() is given in EST
-  last_added = last_added - timedelta(hours=5)
+  last_added = last_added - dt.timedelta(hours=5)
 
-  return last_added
+  return str(last_added)
 
 @task
-def getNewFileURLs(last_added:datetime, ti=None) -> list: 
+def getNewFileURLs(last_added:str, ti=None) -> list: 
   """Check/obtain updates from USCRN updates page"""
-  now = datetime.utcnow()
+  now = dt.datetime.utcnow()
   updates_url = SOURCES['USCRN']['updates'] + "/" + str(now.year)
+
+  last_added = dt.datetime.strptime(last_added,"%Y-%m-%d %H:%M:%S.%f")
 
   df = pd.read_html(updates_url, skiprows=[1,2])[0]
   df.drop(["Size", "Description"], axis=1, inplace=True)
@@ -55,7 +74,7 @@ def getNewFileURLs(last_added:datetime, ti=None) -> list:
   df = df[df['Last modified'] > last_added]
 
   # XCOM Push: Will use update_range to name .csv later
-  update_range = (min(df['Last modified']), max(df['Last modified'])) 
+  update_range = (str(min(df['Last modified'])), str(max(df['Last modified']))) 
   ti.xcom_push(key="update_range", value=update_range)
 
   new_file_urls = list(updates_url + "/" + df['Name'])
@@ -63,7 +82,7 @@ def getNewFileURLs(last_added:datetime, ti=None) -> list:
   return new_file_urls
 
 @task
-def getUpdates(new_file_urls:list) -> dict: 
+def getUpdates(new_file_urls:list) -> list: 
   """Scrape data from list of new urls, store and return as list of lists"""
 
   locations = pd.read_csv(f"{DIR_NAME}/data/locations.csv")
@@ -72,11 +91,17 @@ def getUpdates(new_file_urls:list) -> dict:
 
   rows = []
   for url in new_file_urls:
+    # Log the current URL being processed
+    logger.info(f'Processing URL: {url}')
+    # Scrape data from URL
     response = requests.get(url)
     soup = BeautifulSoup(response.content,'html.parser')
     soup_lines = str(soup).strip().split("\n")[3:]
-    ak_rows = [re.split('\s+', line) for line in soup_lines if line[0:5] in wbs]
+    ak_rows = [re.split('\s+', line) for line in soup_lines if line[0:5] in wbs] # line[0:5] contains WBANNO code
     rows.extend(ak_rows)
+
+  # Log the number of rows extracted
+  logger.info(f'Extracted {len(rows)} rows from URLs')
 
   return rows
 
@@ -96,8 +121,13 @@ def transformDF(rows:list, ti=None):
   # Create dataframe
   df = pd.DataFrame(rows, columns=columns[1:])
 
+  ## (TO-DO) Check for NaN values from source
+
+  
   # Merge locations
   df = df.merge(locations, how="left", left_on="wbanno", right_index=True)
+
+  ## (TO-DO) Check for NaN values from merge 
 
   # Reorder columns 
   columns = ['station_location'] + list(df.columns)[:-1]
@@ -105,6 +135,11 @@ def transformDF(rows:list, ti=None):
 
   # Change datatypes
   df = df.apply(pd.to_numeric, errors='ignore')
+
+  ## (TO-DO) Check for NaN values from type transform 
+
+
+  ## ------ If no NaNs will be masked from source, safe to replace missing value designators ------ ## 
 
   # Replace missing value designators with NaN
   df.replace([-99999,-9999], np.nan, inplace=True) 
@@ -123,24 +158,29 @@ def transformDF(rows:list, ti=None):
   df = df[cols]
 
   # Add date-added column (utc)
-  df['date_added_utc'] = datetime.utcnow() 
+  df['date_added_utc'] = dt.datetime.utcnow() 
 
   # Write to .csv
   # XCOM Pull: `update_range` from XCOM created by 'getNewFileUrls'
-  update_range = ti.xcom_pull(key="update_range", task_id="getNewFileURLs")
-  df.to_csv(f"{DIR_NAME}/data/uscrn_updates/{update_range[0]}-{update_range[1]}.csv")
+  # update_range = ti.xcom_pull(key="update_range", task_id="getNewFileURLs")
+  update_range = ti.xcom_pull(key="update_range", dag_id="uscrn_dag", task_ids="getNewFileURLs")
+  df.to_csv(f"{DIR_NAME}/data/uscrn_updates/{update_range[0]}-{update_range[1]}.csv", index=False)
 
 
 @task
 def uploadBQ(ti=None):
   """Upload latest uscrn_update .csv file to BigQuery"""
 
+  # Set credentials
   key_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
   credentials = service_account.Credentials.from_service_account_file(
    key_path, scopes=["https://www.googleapis.com/auth/cloud-platform"],
   )
+
+  # Create client
   client = bigquery.Client(credentials=credentials, project=PROJECT_ID)
 
+  # Set schema and job_config
   schema = [
     bigquery.SchemaField("station_location", "STRING", mode="REQUIRED"), 
     bigquery.SchemaField("wbanno", "STRING", mode="REQUIRED"), 
@@ -173,26 +213,44 @@ def uploadBQ(ti=None):
   ]
 
   jc = bigquery.LoadJobConfig(
+    source_format = bigquery.SourceFormat.CSV,
+    skip_leading_rows=1,
     autodetect=False,
     schema=schema,
-    source_format="CSV",
     create_disposition="CREATE_NEVER",
     write_disposition="WRITE_APPEND"   
   )
-
+ 
+  # Set target table in BigQuery
   full_table_id = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
-  update_range = ti.xcom_pull(key="update_range", task_id="getNewFileURLs")
-  with open(f"{DIR_NAME}/data/uscrn_updates/{update_range[0]}-{update_range[1]}.csv") as fp: 
-    job = client.load_table_from_file(fp, full_table_id, job_config=jc)
-  job.result()
+    
+  # Read file to dataframe first -- direct loading creating schema issues
 
-  table = client.get_table(full_table_id)
-  print(f"Loaded {table.num_rows} rows and {table.schema} columns")
+  update_range = ti.xcom_pull(key="update_range", dag_id="uscrn_dag", task_ids="getNewFileURLs")
+  file_path = f"{DIR_NAME}/data/uscrn_updates/{update_range[0]}-{update_range[1]}.csv"
+  df = pd.read_csv(file_path)
+
+  # Upload 
+  job = client.load_table_from_dataframe(df, full_table_id, job_config=jc)
+  job.result()
+  
+  # Log result 
+  print(f"Loaded {df.size} rows and {len(df.columns)} columns")
+
+@task
+def appendLocal(ti=None):
+  """Append latest uscrn_update .csv file to local copy of uscrn.csv"""
+
+  update_range = ti.xcom_pull(key="update_range", dag_id="uscrn_dag", task_ids="getNewFileURLs")
+  file_path = f"{DIR_NAME}/data/uscrn_updates/{update_range[0]}-{update_range[1]}.csv"
+
+  updates_df=pd.read_csv(file_path)
+  updates_df.to_csv(f"{DIR_NAME}/data/uscrn.csv", mode="a", header=False, index=False)
 
 ## ---------- DEFINING DAG ---------- ## 
 @dag(
    schedule_interval="@once",
-   start_date=datetime.utcnow(),
+   start_date=dt.datetime.utcnow(),
    catchup=False,
    default_view='graph',
    is_paused_upon_creation=True,
@@ -200,11 +258,13 @@ def uploadBQ(ti=None):
 def uscrn_dag():
     
     t1 = lastAdded()
-    t2 = getUpdates(t1)
-    t3 = transformDF(t2)
-    t4 = uploadBQ()
+    t2 = getNewFileURLs(t1)
+    t3 = getUpdates(t2)
+    t4 = transformDF(t3)
+    t5 = uploadBQ()
+    t6 = appendLocal()
 
-    t1 >> t2 >> t3 >> t4
+    t1 >> t2 >> t3 >> t4 >> [t5, t6]
 
 dag = uscrn_dag()
 

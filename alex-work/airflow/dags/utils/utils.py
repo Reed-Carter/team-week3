@@ -1,3 +1,7 @@
+import pandas as pd 
+  
+## ----- NWS_DAG UTILS ----- ## 
+
 def nwsURL(row):
   """Construct NWS forecast url from latitude and longitude columns"""
   url = f"https://forecast.weather.gov/MapClick.php?lat={row['latitude']}&lon={row['longitude']}&unit=0&lg=english&FcstType=digital&menu=1"
@@ -29,3 +33,13 @@ def getDict(col_list:list):
       data_map[col[0]].extend(col[1:])
   data_map['Date'] = ffList(data_map['Date'])
   return data_map
+
+  ## ----- USCRN_DAG UTILS ----- ## 
+
+
+# def nanCheck(df:pd.DataFrame, msg:str, logger) -> None:  (TO-DO)
+#   """Checks f any rows contain NaNs in a dataframe; logs any such rows and raises exception"""
+
+#   nan_rows = df[df.isna().any(axis=1)]
+#   if not nan_rows.empty: 
+#     logger.
