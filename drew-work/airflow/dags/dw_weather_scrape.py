@@ -86,13 +86,13 @@ def scrape_weather_data():
 @task
 def transform_weather_data(data):
 
-    # df = pd.DataFrame(data)
     df = pd.read_json(data, orient="records")
 
     df[["city", "state"]] = df["location"].str.split(", ", expand=True)
     df["city"] = df["city"].astype(str)
     df["state"] = df["state"].astype(str)
     df[["lat", "lon"]] = df[["lat", "lon"]].astype(float)
+    df["lon"] *= -1
     df["elev_ft"] = df.apply(
         lambda row: int(row["elev_ft"]) if row["elev_ft"] != "NA" else None, axis=1
     )
@@ -176,7 +176,6 @@ def write_weather_data_to_bigquery(data):
         {"name": "last_update", "type": "STRING", "mode": "REQUIRED"},
     ]
 
-    # df = pd.DataFrame(data, index=[0])
     df = pd.read_json(data, orient="records")
 
     client = bigquery.Client()
