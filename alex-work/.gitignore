@@ -1,4 +1,4 @@
-data/
+airflow/data/*.csv
 logs/
 plugins/
 .env
