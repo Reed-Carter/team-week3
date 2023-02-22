@@ -1,13 +1,13 @@
 ## National Weather Service Web Scrape and ETL
 #### By [Drew White](https://www.linkedin.com/in/drew-riley-white/)
 ## Contents
-[Summary](#summary)|
-[Technologies Used](#technologies-used)|
-[Sources](#sources)|
-[Description](#description)|
-[dw_weather_scrape.py](#dw_weather_scrapepy)|
-[dw_weekly_avg.py](#dw_weekly_avgpy)|
-[Visualizations](#visualizations)|
+[Summary](#summary) |
+[Technologies Used](#technologies-used) |
+[Sources](#sources) |
+[Description](#description) |
+[dw_weather_scrape.py](#dw_weather_scrapepy) |
+[dw_weekly_avg.py](#dw_weekly_avgpy) |
+[Visualizations](#visualizations) |
 [Known Bugs](#known-bugs)
 ### Links:
 [Looker Dashboard](https://lookerstudio.google.com/reporting/7fda1afa-8d15-402d-8773-a37f5a61bed1)
