@@ -1,11 +1,12 @@
 from datetime import datetime, date
-import dateutil
+import dateutil.parser
 from typing import List, Dict, Any
 from bs4 import BeautifulSoup
 import requests
 import re
 import json
 import pandas as pd
+import numpy as np
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 from google.oauth2.service_account import Credentials
@@ -17,49 +18,64 @@ from airflow.utils.dates import days_ago
 
 @task
 def scrape_weather_data():
+    """scrapes weather from national weather service and turns to json
 
+    Returns:
+        json of weather data
+    """
     CITIES = "/usr/local/airflow/data/cities.json"
     with open(CITIES) as f:
         CITIES = json.load(f)
 
     data = []
-
+    # loop through cities using beautiful soup
     for city in CITIES:
+
         try:
             response = requests.get(city["NWS_URL"])
         except:
             continue
         soup = BeautifulSoup(response.content, "html.parser")
 
+        # scrape location
         location = soup.find("h2", {"class": "panel-title"})
+
+        # scrape lat, lon and elv
         lat_lon_elev = soup.find("span", {"class": "smallTxt"}).text.strip()
         lat, lon, elev = re.findall(r"[-+]?\d*\.\d+|\d+", lat_lon_elev)
+
+        # scrape temperature
         temperature = soup.find("p", {"class": "myforecast-current-lrg"})
+
+        # scrape humidity
         humidity_elem = soup.find("td", text="Humidity")
         humidity = humidity_elem.find_next("td").text.strip() if humidity_elem else None
+
+        # scrape wind speed
         wind_speed_elem = soup.find("td", text="Wind Speed")
-        wind_speed = (
-            wind_speed_elem.find_next("td").text.strip() if wind_speed_elem else None
-        )
+        wind_speed = (wind_speed_elem.find_next("td").text.strip() if wind_speed_elem else None)
+
+        # scrape barometer
         barometer_elem = soup.find("td", text="Barometer")
-        barometer = (
-            barometer_elem.find_next("td").text.strip() if barometer_elem else None
-        )
+        barometer = (barometer_elem.find_next("td").text.strip() if barometer_elem else None)
+
+        # scrape dew point
         dewpoint_elem = soup.find("td", text="Dewpoint")
         dewpoint = dewpoint_elem.find_next("td").text.strip() if dewpoint_elem else None
-        visibility_elem = soup.find("td", text="Visibility")
-        visibility = (
-            visibility_elem.find_next("td").text.strip() if visibility_elem else None
-        )
-        wind_chill_elem = soup.find("td", text="Wind Chill")
-        wind_chill = (
-            wind_chill_elem.find_next("td").text.strip() if wind_chill_elem else None
-        )
-        last_update_elem = soup.find("td", text="Last update")
-        last_update = (
-            last_update_elem.find_next("td").text.strip() if last_update_elem else None
-        )
 
+        # scrape visibility
+        visibility_elem = soup.find("td", text="Visibility")
+        visibility = (visibility_elem.find_next("td").text.strip() if visibility_elem else None)
+
+        # scrape windchill
+        wind_chill_elem = soup.find("td", text="Wind Chill")
+        wind_chill = (wind_chill_elem.find_next("td").text.strip() if wind_chill_elem else None)
+
+        # scrape last update date
+        last_update_elem = soup.find("td", text="Last update")
+        last_update = (last_update_elem.find_next("td").text.strip() if last_update_elem else None)
+
+        # appends scraped data in following format:
         data.append(
             {
                 "location": city["Name"],
@@ -82,75 +98,88 @@ def scrape_weather_data():
 
     return data
 
-
 @task
 def transform_weather_data(data):
+    """read json into df and transforms data
 
+    Args:
+        data (json from scrape func)
+
+    Returns:
+        json of transformed data
+    """
+
+    # read json
     df = pd.read_json(data, orient="records")
-
+    # separate city and state from location and set as string
     df[["city", "state"]] = df["location"].str.split(", ", expand=True)
     df["city"] = df["city"].astype(str)
     df["state"] = df["state"].astype(str)
+
+    # convert lat and lon to float
     df[["lat", "lon"]] = df[["lat", "lon"]].astype(float)
+
+    # multiply lon by -1 to reflect the western hemisphere
     df["lon"] *= -1
-    df["elev_ft"] = df.apply(
-        lambda row: int(row["elev_ft"]) if row["elev_ft"] != "NA" else None, axis=1
-    )
-    df["temp_f"] = df["temperature"].str.extract("(\d+)").astype(int)
+
+    # convert elev_ft to int
+    df["elev_ft"] = df.apply(lambda row: int(row["elev_ft"]) if row["elev_ft"] != "NA" else None, axis=1)
+
+    # make conversions and separate columns for temp_f and temp_c convert to int
+    # df["temp_f"] = df["temperature"].str.extract("(\d+)").astype(int)
+    df["temp_f"] = df["temperature"].str.extract("(\d+)").astype(float).fillna(value=0).astype(int)
     df["temp_c"] = (df["temp_f"] - 32) * 5 / 9
     df["temp_c"] = df["temp_c"].round().astype(int)
-    df["humidity"] = (
-        df["humidity"].str.extract("(\d+)", expand=False).astype(float) / 100
-    )
-    df["wind_speed"] = (
-        df["wind_speed"].str.extract("(\d+)", expand=False).fillna(0).astype(int)
-    )
+
+    # convert humidity percentage to float
+    df["humidity"] = (df["humidity"].str.extract("(\d+)", expand=False).astype(float) / 100)
+
+    # convert wind_speed to int
+    df["wind_speed"] = (df["wind_speed"].str.extract("(\d+)", expand=False).fillna(0).astype(int))
     df["wind_speed"] = df["wind_speed"].replace("Calm", 0)
-    df["barometer"] = df["barometer"].apply(
-        lambda x: float(x.split()[0]) * 33.8639 if "in" in x and x != "NA" else None
-    )
+
+    # convert barometer to millibars and display as float
+    df["barometer"] = df["barometer"].apply(lambda x: float(x.split()[0]) * 33.8639 if "in" in x and x != "NA" else None)
     df["barometer"] = df["barometer"].round(2)
-    df[["dewpoint_f", "dewpoint_c"]] = (
-        df["dewpoint"].str.extract("(\d+).*?(\d+)", expand=True).astype(int)
-    )
-    df["vis_miles"] = (
-        df["vis_miles"]
-        .str.extract("(\d+\.\d+|\d+)", expand=False)
-        .astype(float)
-        .round(2)
-    )
-    df[["wind_chill_f", "wind_chill_c"]] = (
-        df["wind_chill"]
-        .str.extract("(\d+).*?(\d+)", expand=True)
-        .astype(float)
-        .fillna(0)
-    )
-    df[["wind_chill_f", "wind_chill_c"]] = (
-        df["wind_chill"]
-        .str.extract("(\d+).*?(\d+)", expand=True)
-        .astype(float)
-        .fillna(0)
-        .replace(0, None)
-    )
-    df["last_update"] = df["last_update"].apply(
-        lambda x: dateutil.parser.parse(
-            x, tzinfos={"CST": dateutil.tz.tzoffset(None, -21600)}
-        ).astimezone(dateutil.tz.tzutc())
-    )
-    df["last_update"] = df["last_update"].apply(
-        lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f")
-    )
+
+    # create two columns for dewpoint_f and dewpoint_c and convert to int
+    # df[["dewpoint_f", "dewpoint_c"]] = (df["dewpoint"].str.extract("(\d+).*?(\d+)", expand=True).astype(int))
+    df["dewpoint"].fillna(0, inplace=True)
+    df[["dewpoint_f", "dewpoint_c"]] = df["dewpoint"].str.extract("(\d+).*?(\d+)", expand=True).fillna(0).astype(int)
+
+    # strip and convert vis_miles to float
+    df["vis_miles"] = (df["vis_miles"].str.extract("(\d+\.\d+|\d+)", expand=False).astype(float).round(2))
+
+    # create two columns for windchill_f and windchill_c and convert to float
+    df[["wind_chill_f", "wind_chill_c"]] = (df["wind_chill"].str.extract("(\d+).*?(\d+)", expand=True).astype(float).fillna(0))
+    df[["wind_chill_f", "wind_chill_c"]] = (df["wind_chill"].str.extract("(\d+).*?(\d+)", expand=True).astype(float).fillna(0).replace(0, None))
+
+    # convert last update to timestamp
+    # print(df["last_update"])
+    # df["last_update"] = df["last_update"].apply(lambda x: dateutil.parser.parse(x, tzinfos={"CST": dateutil.tz.tzoffset(None, -21600)}).astimezone(dateutil.tz.tzutc()))
+    # df["last_update"] = df["last_update"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f"))
+    df['last_update'] = df['last_update'].apply(lambda x: pd.NaT if x == '*** Not a current observation ***' else dateutil.parser.parse(x, tzinfos={'CST': dateutil.tz.tzoffset(None, -21600)}))
+    df['last_update'] = df['last_update'].apply(lambda x: np.datetime64('NaT') if pd.isna(x) else x)
+    df['last_update'] = df['last_update'].apply(lambda x: x.astimezone(dateutil.tz.tzutc()) if not pd.isna(x) else x)
+    df["last_update"] = df["last_update"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M:%S.%f") if not pd.isna(x) else x)
+    # drop unneeded columns
     df = df.drop(["temperature", "dewpoint", "wind_chill"], axis=1)
 
+    # put None for Null
     df = df.where(pd.notnull(df), None)
-    # Convert dataframe to list of dictionaries
+
+    # Convert dataframe to json
     data = df.to_json(orient="records")
 
     return data
 
-
 @task
 def write_weather_data_to_bigquery(data):
+    """reads json into df and loads df into bigquery
+
+    Args:
+        data (json from transform func)
+    """
 
     PROJECT_ID = "team-week3"
     DATASET_ID = "weather_dw"
@@ -207,27 +236,23 @@ def write_weather_data_to_bigquery(data):
 @dag(
     "weather_data_pipeline",
     description="Scrapes National Weather Service website every 12 hours, transforms data and loads to bigquery",
-    start_date=days_ago(2),
-    schedule_interval="0 * * * *",
+    start_date=datetime.utcnow(),
+    schedule_interval="0 0,12 * * *",
 )
 def weather_data_pipeline():
+    """define tasks and task dependencies"""
 
     scrape_weather_data_task = scrape_weather_data()
 
     transform_weather_data_task = transform_weather_data(scrape_weather_data_task)
 
-    write_weather_data_to_bigquery_task = write_weather_data_to_bigquery(
-        transform_weather_data_task
-    )
+    write_weather_data_to_bigquery_task = write_weather_data_to_bigquery(transform_weather_data_task)
 
     done = DummyOperator(task_id="done")
 
-    (
-        scrape_weather_data_task
-        >> transform_weather_data_task
-        >> write_weather_data_to_bigquery_task
-        >> done
-    )
+
+    scrape_weather_data_task >> transform_weather_data_task >> write_weather_data_to_bigquery_task >> done
+
 
 
 dag = weather_data_pipeline()
