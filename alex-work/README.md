@@ -11,34 +11,33 @@ There are two main data sources for my portion of the project:
 2. Use Airflow to orchestrate the same process for any updates issued by USCRN and NWS.
 3. Connect BigQuery dataset to Looker Studio Dashboard.
 
-### **Directory Structure** 
+#### **Directory Structure** 
 ```
 ├── notebooks
 │   ├── uscrn_scrape.ipynb
-│   ├── uscrn_scrape.py
-|   └── nws_scrape.ipynb
+│   └── uscrn_scrape.py
 ├── airflow
-│   ├── airflow.sh
+│   ├── airflow.sh   # Activate Airflow CL  
 │   ├── dags
-│   │   ├── nws_dag.py
-│   │   ├── uscrn_updates.py
+│   │   ├── nws_dag.py       
+│   │   ├── uscrn_updates.py 
 │   │   └── utils
 │   │       └── utils.py
 │   ├── data
-│   │   ├── nws_updates
 │   │   ├── sources.yaml
-│   │   └── uscrn_updates
+│   │   ├── nws_updates    # Stores updates from nws_dag.py
+│   │   └── uscrn_updates # Stores updates from uscrn_updates.py
 │   └── docker-compose.yaml
 ├── img
 └── README.md
 ```
 
-`./notebooks/uscrn_scrape.ipynb` Explains and contains code to scrape the main USCRN data as well as supplemental data on column headers and descriptions.  
+`./notebooks/uscrn_scrape.ipynb` &nbsp;- &nbsp; Explains and contains code to scrape the main USCRN data as well as supplemental data on column headers and descriptions.  
 
-`./notebooks/uscrn_scrape.py` contains a python script to scrape all currently available data from the USCRN database.
+`./notebooks/uscrn_scrape.py` &nbsp; - &nbsp; Contains a python script to scrape all currently available data from the USCRN database (run this to download the data instead of the notebook).
 
 
-### **Updating Data** 
+####  **Updating Data** 
 The `./airflow/dags/` directory contains two dag files (`uscrn_updates.py` and `nws_dag.py`) that can scrape updates from the USCRN and NWS data sources at regularly scheduled interviews. This scheduling parameter is customizable via the `dag` decorator at the end of each file: 
 
 ```python 
