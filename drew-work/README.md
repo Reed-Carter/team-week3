@@ -1,7 +1,19 @@
 ## National Weather Service Web Scrape and ETL
 #### By [Drew White](https://www.linkedin.com/in/drew-riley-white/)
 
-#### Summary:
+#### [View LookerDashboard Here](https://lookerstudio.google.com/reporting/7fda1afa-8d15-402d-8773-a37f5a61bed1)
+
+## Contents
+[Summary](#summary)|
+[Technologies Used](#technologies-used)|
+[Sources](#sources)|
+[Description](#description)|
+[dw_weather_scrape.py](#dw_weather_scrapepy)|
+[dw_weekly_avg.py](#dw_weekly_avgpy)|
+[Visualizations](#visualizations)|
+[Known Bugs](#known-bugs)
+
+## Summary:
 This is a data engineering project that utilizes various technologies to scrape weather data, transform it, and store it in Google BigQuery. The project uses Python as its primary language and Apache Airflow as its workflow management system. BeautifulSoup is used to scrape the data from the National Weather Service and Pandas is used to manipulate the data. Google BigQuery is used as the primary data store.
 
 The `dw_weather_scrape.py` script contains three functions that work together to scrape weather data from the National Weather Service, transform the data, and write it to Google BigQuery on a daily basis.
@@ -55,6 +67,9 @@ _A dictionary of the sources of the city weather data:_
 ### Weekly Avg Schema:
 <img src="../images/dw_weekly_avg_schema.png">
 <br>
+
+## Visualizations
+<img src="../images/dw_dashboard.png" height=80% width=60%>
 
 ## Known Bugs
 
