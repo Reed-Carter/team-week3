@@ -1,66 +1,52 @@
-### ETL Overview 
+### **Alaska Weather ETL Pipeline** 
 
 There are two main data sources for my portion of the project:
-* [USCRN Hourly Historical Weather Data](https://www.ncei.noaa.gov/pub/data/uscrn/products/hourly02/): This page contains hourly weather data from the U.S. Climate Reference Network / U.S. Regional Climate Reference Network (USCRN/USRCRN) stored as tabular .txt files. 
-* [NWS Forecasts](https://forecast.weather.gov/MapClick.php?lat=60.7506&lon=-160.5006&unit=0&lg=english&FcstType=digital): The National Weather Service has forecast offices in Fairbanks and Anchorage which provide hourly forecasts from various weather stations in AK. These are available in 48-Hour blocks up to four days out, stored in a tabular format.
+* [USCRN Hourly Historical Weather Data](https://www.ncei.noaa.gov/pub/data/uscrn/products/hourly02/): This page contains hourly weather data from the U.S. Climate Reference Network / U.S. Regional Climate Reference Network (USCRN/USRCRN) stored in text files. 
+* [NWS Forecasts](https://forecast.weather.gov/MapClick.php?lat=60.7506&lon=-160.5006&unit=0&lg=english&FcstType=digital): The National Weather Service has forecast offices in Fairbanks and Anchorage which provide hourly forecasts by coordinate location in AK. These are available in 48-Hour blocks up to four days out, stored in a tabular format.
   
 ![nws_tabular_example](img/nws_tabular_ex.png)
 
+#### **Steps in the ETL**  
+1. Scrape all currently available USCRN data from stations in Alaska, then transform and load to BigQuery.
+2. Use Airflow to orchestrate the same process for any updates issued by USCRN and NWS.
+3. Connect BigQuery dataset to Looker Studio Dashboard.
 
-_USCRN pipeline_
+#### **Directory Structure** 
+```
+├── notebooks
+│   ├── uscrn_scrape.ipynb
+│   └── uscrn_scrape.py
+├── airflow
+│   ├── airflow.sh   # Activate Airflow CL  
+│   ├── dags
+│   │   ├── nws_dag.py       
+│   │   ├── uscrn_updates.py 
+│   │   └── utils
+│   │       └── utils.py
+│   ├── data
+│   │   ├── sources.yaml
+│   │   ├── nws_updates    # Stores updates from nws_dag.py
+│   │   └── uscrn_updates # Stores updates from uscrn_updates.py
+│   └── docker-compose.yaml
+├── img
+└── README.md
+```
 
-For data that's already available: 
+`./notebooks/uscrn_scrape.ipynb` &nbsp;- &nbsp; Explains and contains code to scrape the main USCRN data as well as supplemental data on column headers and descriptions.  
 
-1. Save column names and description from [headers.txt](https://www.ncei.noaa.gov/pub/data/uscrn/products/hourly02/headers.txt) to .csv
-2.  Scrape all existing USCRN data from weather stations in Alaska and save locally to a .csv
-       - For each year ([2000-2023](https://www.ncei.noaa.gov/pub/data/uscrn/products/hourly02/)): 
-         - Find all filenames containing 'AK'
-         - For each 'AK' file: 
-           - Retrieve .txt data as dataframe 
-           - Add column headers from `headers.txt`
-           - Add a location column based on filename 
-           - Append to list of rows
-         - Create dataframe from list of rows
-         - Write dataframe to .csv
-3.  Upload .csv to Big Query 
+`./notebooks/uscrn_scrape.py` &nbsp; - &nbsp; Contains a python script to scrape all currently available data from the USCRN database (run this to download the data instead of the notebook).
 
-For future data, write a dag with tasks: 
-1. getUpdates()
-    -  Checks the value for 'Last modified' on the current year's [index page](https://www.ncei.noaa.gov/pub/data/uscrn/products/hourly02/2023/) 
-    -  If more recent than the last recorded value: 
-       -  For every AK dataset on page: 
-          -  Retrieve the .txt file 
-          -  Add column headers from `headers.txt`
-          -  Filter for records after current 'Last modified' value
-          -  Write (append) new records to .csv  
-       -  Store the new 'Last modified' value 
-       -  Trigger next task
-    -  Else, pass and do not trigger next task
-2. upload() 
-   - Upload (append) .csv of new records to BigQuery table 
 
-_NWS pipeline_
+####  **Updating Data** 
+The `./airflow/dags/` directory contains two dag files (`uscrn_updates.py` and `nws_dag.py`) that can scrape updates from the USCRN and NWS data sources at regularly scheduled interviews. This scheduling parameter is customizable via the `dag` decorator at the end of each file: 
 
-I have not found records of previous weather forecasts from NWS, so there won't be any preliminary data uploading for this data source. 
+```python 
+@dag(
+   schedule_interval="@once", # Change here 
+   start_date=dt.datetime.utcnow(),
+   catchup=False,
+   default_view='graph',
+   is_paused_upon_creation=True,
+)
+```
 
-For future data, add new tasks to the DAG: 
-
-1. getCurrentForecast():
-   - For each AK location: 
-     - Scrape hourly forecast for next 48 hours
-     - Save as dataframe (need to "transpose" rows and columns, first)
-     - Add column for location 
-     - Append to .csv
-2. upload():
-   - Upload (append) .csv of new forecast records to BigQuery.
-   - Can use the same function defined for the other data source -- just change destination in BigQuery and check column schema to match
-
-It might be interesting to check how the accuracy of weather forecasts is affected by how far out the prediction is made. To that effect, I could modify getCurrentForecast() to include farther-out forecasts and track when a given forecast was made: 
-   - For each AK Location:
-      - From current date to farthest out: 
-        - Scrape hourly forecast for next 48 hours
-        - Save as dataframe (need to "transpose" rows and columns, first)
-        - Click 'Forward 2 Days' with selenium and repeat above steps until furthest date is reached
-      - Add timestamp column ('forecast_made')
-      - Add column for location
-      - Append to .csv

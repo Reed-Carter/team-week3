@@ -3,3 +3,5 @@ logs/
 plugins/
 .env
 __pycache__/
+todo.txt
+nws_scrape2.ipynb
