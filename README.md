@@ -32,7 +32,7 @@
 
 1. Make a directory on your disk where you would like to clone the repo.
 
-2. Copy the repo link: https://github.com/apsocarras/airflow-review2.git (available if you click the green "Code" dropdown button on this page).
+2. Copy the repo link: https://github.com/apsocarras/team-week3.git (available if you click the green "Code" dropdown button on this page).
 
 3. Open your terminal and change into the directory you made (`cd /path/to/new/directory`).
 
