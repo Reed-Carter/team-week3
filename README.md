@@ -1,4 +1,4 @@
-# US Weather Data (_Team Week 3_)
+# US Weather Data _(team-week3)_
 
 #### By [Alejandro Socarras](https://alexsocarras.com/), [Drew White](https://www.linkedin.com/in/drew-riley-white/), [Reed Carter](https://www.linkedin.com/in/reed-carter/)
 
