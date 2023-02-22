@@ -1,6 +1,6 @@
 # US Weather Data (_Team Week 3_)
 
-#### By Alejandro Socarras, Drew White, Reed Carter
+#### By [Alejandro Socarras](https://alexsocarras.com/), [Drew White](https://www.linkedin.com/in/drew-riley-white/), [Reed Carter](https://www.linkedin.com/in/reed-carter/)
 
 ## ETL webscraping pipelines using Airflow
 
@@ -16,18 +16,16 @@
  
 ### Dashboard Presentations
 
-#### _[Dashboard #1 (Drew White)]()_
-#### _[Dashboard #2 (Alejandro Socarras)](https://lookerstudio.google.com/u/0/reporting/3d8306ba-0df6-42cb-bb90-f23924a0d2c6/page/4c9FD/edit)_
-#### _[Dashboard #3 (Reed Carter)]()_
+#### _[Dashboard #1 (Alejandro Socarras)](https://lookerstudio.google.com/u/0/reporting/3d8306ba-0df6-42cb-bb90-f23924a0d2c6/)_
+#### _[Dashboard #2 (Drew White)](https://lookerstudio.google.com/u/0/reporting/7fda1afa-8d15-402d-8773-a37f5a61bed1/)_
+#### _[Dashboard #3 (Reed Carter)](https://lookerstudio.google.com/u/0/reporting/186edd53-7b48-4350-8921-8c654fdfc5ae/)_
 
-### Datasets Used
+### Data Sources
 
 * [US Climate Research Network](https://www.ncei.noaa.gov/pub/data/uscrn/products/hourly02/)
 * [National Weather Service](https://www.weather.gov/)
-* 
-* 
+* [VisualCrossing API](https://www.visualcrossing.com/)
 
-</br>
 
 ### Setup/Installation Requirements
 **_Clone repo to your local system:_**
