@@ -1,11 +1,11 @@
 # US Weather Data _(team-week3)_
 
-#### By [Alejandro Socarras](https://alexsocarras.com/), [Drew White](https://www.linkedin.com/in/drew-riley-white/), [Reed Carter](https://www.linkedin.com/in/reed-carter/)
+#### By [Reed Carter](https://www.linkedin.com/in/reed-carter/), [Alejandro Socarras](https://alexsocarras.com/), [Drew White](https://www.linkedin.com/in/drew-riley-white/)
 
-## ETL webscraping pipelines using Airflow
+## ETL webscraping pipelines using Airflow which create current weather visualizations!
 
-![alaska_dash](./images/alaska.gif)
 ![simple_dag](./images/dw_webscrape_daily_gif.gif)
+![Weather_dash](./images/weather_visualization.gif)
 
 ### Technologies Used
 
@@ -16,9 +16,9 @@
  
 ### Dashboard Presentations
 
-#### _[Dashboard #1 (Alejandro Socarras)](https://lookerstudio.google.com/u/0/reporting/3d8306ba-0df6-42cb-bb90-f23924a0d2c6/)_
-#### _[Dashboard #2 (Drew White)](https://lookerstudio.google.com/u/0/reporting/7fda1afa-8d15-402d-8773-a37f5a61bed1/)_
-#### _[Dashboard #3 (Reed Carter)](https://lookerstudio.google.com/u/0/reporting/186edd53-7b48-4350-8921-8c654fdfc5ae/)_
+#### _[Dashboard #1 (Reed Carter)](https://lookerstudio.google.com/u/0/reporting/186edd53-7b48-4350-8921-8c654fdfc5ae/)_
+#### _[Dashboard #2 (Alejandro Socarras)](https://lookerstudio.google.com/u/0/reporting/3d8306ba-0df6-42cb-bb90-f23924a0d2c6/)_
+#### _[Dashboard #3 (Drew White)](https://lookerstudio.google.com/u/0/reporting/7fda1afa-8d15-402d-8773-a37f5a61bed1/)_
 
 ### Data Sources
 
@@ -32,7 +32,7 @@
 
 1. Make a directory on your disk where you would like to clone the repo.
 
-2. Copy the repo link: https://github.com/apsocarras/team-week3.git (available if you click the green "Code" dropdown button on this page).
+2. Copy the repo link: https://github.com/Reed-Carter/team-week3/ (available if you click the green "Code" dropdown button on this page).
 
 3. Open your terminal and change into the directory you made (`cd /path/to/new/directory`).
 
